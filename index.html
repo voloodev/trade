@@ -207,3 +207,16 @@
     </script>
 </body>
 </html>
+// Service Worker Register කිරීම (PWA සඳහා)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(() => {
+        console.log("Service Worker Registered!");
+    });
+}
+
+// App එකක් විදිහට Install කරන්න අහන එක
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+});
