@@ -18,7 +18,7 @@
         body {
             background-color: var(--bg);
             color: var(--text);
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -26,9 +26,27 @@
             align-items: center;
         }
 
-        header { text-align: center; margin-bottom: 40px; }
-        h1 { color: var(--primary); font-size: 3rem; text-transform: uppercase; margin: 0; }
-        .status-bar { background: #1e293b; padding: 10px 20px; border-radius: 50px; border: 1px solid var(--primary); font-size: 0.9rem; margin-top: 10px; }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 3rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .status-bar {
+            background: #1e293b;
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 1px solid var(--primary);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
 
         #signals-container {
             display: grid;
@@ -43,18 +61,72 @@
             border-radius: 15px;
             padding: 20px;
             border-left: 5px solid var(--primary);
-            box-shadow: 0 10px 15px rgba(0,0,0,0.3);
-            animation: fadeIn 0.5s ease-in;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .signal-card:hover {
+            transform: translateY(-5px);
+        }
 
-        .symbol { font-size: 1.5rem; font-weight: bold; display: flex; justify-content: space-between; }
-        .type { background: rgba(0, 255, 136, 0.2); color: var(--primary); padding: 5px 12px; border-radius: 5px; font-size: 0.8rem; }
-        .price-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; margin: 20px 0; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center; }
-        .price-box label { display: block; font-size: 0.7rem; color: #94a3b8; }
-        .description { font-size: 0.9rem; color: #cbd5e1; font-style: italic; }
-        .time { margin-top: 15px; font-size: 0.75rem; color: #64748b; display: block; text-align: right; }
+        .symbol {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .type {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--primary);
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+
+        .price-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            margin: 20px 0;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .price-box label {
+            display: block;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-bottom: 5px;
+        }
+
+        .price-box span {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .description {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .time {
+            margin-top: 15px;
+            font-size: 0.75rem;
+            color: #64748b;
+            display: block;
+            text-align: right;
+        }
+
+        .loader {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-top: 50px;
+        }
     </style>
 </head>
 <body>
@@ -62,17 +134,17 @@
     <header>
         <h1>Voloo !</h1>
         <p>Advanced SMC Crypto Scanner</p>
-        <div class="status-bar" id="status">● Connecting to Market...</div>
+        <div class="status-bar">● Live Market Analysis Active</div>
     </header>
 
     <div id="signals-container">
-        <div style="text-align:center; width:100%;">🔍 Waiting for signals...</div>
+        <div class="loader">🔍 Searching for high-probability signals...</div>
     </div>
 
     <script>
-        // ඔයා දීපු Config එක මෙතන තියෙනවා
+        // --- මෙතනට ඔයාගේ FIREBASE CONFIG එක දාන්න ---
         const firebaseConfig = {
-            apiKey: "AIzaSyAn5zdRRD7bOV4onSPyv6ya238F_jm9lAA",
+           apiKey: "AIzaSyAn5zdRRD7bOV4onSPyv6ya238F_jm9lAA",
             authDomain: "trade-56a15.firebaseapp.com",
             projectId: "trade-56a15",
             storageBucket: "trade-56a15.firebasestorage.app",
@@ -81,52 +153,55 @@
             measurementId: "G-0YT6XXPXNL"
         };
 
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        let firstLoad = true;
 
-        // Browser Notifications ඉල්ලීම
-        if (Notification.permission !== "granted") {
-            Notification.requestPermission();
-        }
-
+        // Listen for Signals
         db.collection("signals").orderBy("time", "desc").onSnapshot((snapshot) => {
             const container = document.getElementById("signals-container");
-            document.getElementById("status").innerText = "● Live Market Analysis Active";
             
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "added" && !firstLoad) {
-                    // අලුත් සිග්නල් එකක් ආවම Notification එකක් දීම
-                    const data = change.doc.data();
-                    new Notification("🚀 New Signal: " + data.symbol, {
-                        body: data.type + " Entry at " + data.entry,
-                        icon: "https://cdn-icons-png.flaticon.com/512/1990/1990263.png"
-                    });
-                    
-                    // Sound එකක් play කිරීම (optional)
-                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                    audio.play();
-                }
-            });
+            if (snapshot.empty) {
+                container.innerHTML = '<div class="loader">No signals detected yet. Scanning market...</div>';
+                return;
+            }
 
-            firstLoad = false;
-            container.innerHTML = ""; 
+            container.innerHTML = ""; // Clear loader
 
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                const timeStr = data.time ? new Date(data.time.toDate()).toLocaleString() : "Scanning...";
+                const timeStr = data.time ? new Date(data.time.toDate()).toLocaleString() : "Just now";
 
-                container.innerHTML += `
+                const card = `
                     <div class="signal-card">
-                        <div class="symbol">${data.symbol} <span class="type">${data.type}</span></div>
-                        <div class="price-grid">
-                            <div class="price-box"><label>ENTRY</label><span>${data.entry}</span></div>
-                            <div class="price-box"><label style="color:var(--primary)">TP</label><span>${data.tp}</span></div>
-                            <div class="price-box"><label style="color:#ff4d4d">SL</label><span>${data.sl}</span></div>
+                        <div class="symbol">
+                            ${data.symbol}
+                            <span class="type">${data.type}</span>
                         </div>
-                        <div class="description">${data.description}</div>
+                        
+                        <div class="price-grid">
+                            <div class="price-box">
+                                <label>ENTRY</label>
+                                <span>${data.entry}</span>
+                            </div>
+                            <div class="price-box">
+                                <label style="color: #00ff88;">TARGET</label>
+                                <span>${data.tp}</span>
+                            </div>
+                            <div class="price-box">
+                                <label style="color: #ff4d4d;">STOP</label>
+                                <span>${data.sl}</span>
+                            </div>
+                        </div>
+
+                        <div class="description">
+                            ${data.description}
+                        </div>
+                        
                         <span class="time">Last Update: ${timeStr}</span>
-                    </div>`;
+                    </div>
+                `;
+                container.innerHTML += card;
             });
         });
     </script>
